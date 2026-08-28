@@ -1,11 +1,13 @@
+
 import { useState } from "react";
 import "../styles/auth.css";
 import { loginUser } from "../services/api";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 function Login() {
   const { login } = useAuth();
+  const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -27,17 +29,21 @@ function Login() {
         password,
       });
 
-      // Store JWT through AuthContext
-      login(data.token);
-
       console.log("Login successful:", data);
+
+      // Store token and user data
+      login(data.token, data.user);
 
       setSuccess(data.message || "Login successful");
 
+      // Redirect to dashboard
+      navigate("/dashboard");
     } catch (error) {
       console.error("Login failed:", error);
 
-      setError(error.message);
+      setError(
+        error.message || "Login failed. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -46,10 +52,10 @@ function Login() {
   return (
     <main className="auth-page">
       <div className="auth-card">
-
-        {/* Header */}
         <div className="auth-header">
-          <div className="brand">DevSpace</div>
+          <div className="brand">
+            DevSpace
+          </div>
 
           <h1>Welcome back</h1>
 
@@ -58,13 +64,10 @@ function Login() {
           </p>
         </div>
 
-        {/* Login Form */}
         <form
           onSubmit={handleSubmit}
           className="auth-form"
         >
-
-          {/* Email */}
           <div className="form-group">
             <label htmlFor="email">
               Email
@@ -75,12 +78,13 @@ function Login() {
               type="email"
               placeholder="you@example.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
               required
             />
           </div>
 
-          {/* Password */}
           <div className="form-group">
             <label htmlFor="password">
               Password
@@ -91,41 +95,42 @@ function Login() {
               type="password"
               placeholder="Enter your password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
               required
             />
           </div>
 
-          {/* Error */}
           {error && (
             <div className="auth-message auth-error">
               {error}
             </div>
           )}
 
-          {/* Success */}
           {success && (
             <div className="auth-message auth-success">
               {success}
             </div>
           )}
 
-          {/* Button */}
           <button
             type="submit"
             className="auth-button"
             disabled={loading}
           >
-            {loading ? "Logging in..." : "Login"}
+            {loading
+              ? "Logging in..."
+              : "Login"}
           </button>
-
         </form>
 
-        {/* Footer */}
         <p className="auth-footer">
-  Don't have an account?{" "}
-  <Link to="/register">Create one</Link>
-</p>
+          Don't have an account?{" "}
+          <Link to="/register">
+            Create one
+          </Link>
+        </p>
       </div>
     </main>
   );
