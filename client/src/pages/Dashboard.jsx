@@ -5,6 +5,9 @@ import {
   createProject,
   getProjects,
   deleteProject,
+  updateProject,
+  getMemberInvitations,
+  respondToMemberInvitation,
 } from "../services/api";
 import "./Dashboard.css";
 
@@ -16,10 +19,27 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Create project states
   const [showForm, setShowForm] = useState(false);
   const [projectName, setProjectName] = useState("");
   const [description, setDescription] = useState("");
   const [creating, setCreating] = useState(false);
+  const [invitations, setInvitations] = useState([]);
+  const [invitationActionLoading, setInvitationActionLoading] = useState(false);
+
+  // Edit project states
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [editProjectName, setEditProjectName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [updating, setUpdating] = useState(false);
+
+  const openCreateProjectForm = () => {
+    setError("");
+    setProjectName("");
+    setDescription("");
+    setShowForm(true);
+  };
 
   // Logout
   const handleLogout = () => {
@@ -51,6 +71,44 @@ function Dashboard() {
     }
   }, [token]);
 
+  useEffect(() => {
+    const fetchInvitations = async () => {
+      try {
+        const data = await getMemberInvitations(token);
+        setInvitations(data.invitations || []);
+      } catch (error) {
+        console.error("Failed to fetch invitations:", error);
+        // Invitations are supplemental; do not block the dashboard when unavailable.
+      }
+    };
+
+    if (token) {
+      fetchInvitations();
+    }
+  }, [token]);
+
+  const handleInvitationResponse = async (invitation, action) => {
+    try {
+      setInvitationActionLoading(true);
+      setError("");
+      await respondToMemberInvitation(
+        invitation.projectId,
+        invitation.membershipId,
+        action,
+        token
+      );
+      setInvitations((previousInvitations) =>
+        previousInvitations.filter(
+          (item) => item.membershipId !== invitation.membershipId
+        )
+      );
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setInvitationActionLoading(false);
+    }
+  };
+
   // Create new project
   const handleCreateProject = async (e) => {
     e.preventDefault();
@@ -66,7 +124,7 @@ function Dashboard() {
 
       const data = await createProject(
         {
-          name: projectName,
+          name: projectName.trim(),
           description: description,
         },
         token
@@ -92,6 +150,63 @@ function Dashboard() {
     }
   };
 
+  // Open edit modal
+  const handleOpenEdit = (project) => {
+    setError("");
+    setEditingProject(project);
+    setEditProjectName(project.name || "");
+    setEditDescription(project.description || "");
+    setShowEditForm(true);
+  };
+
+  // Update project
+  const handleUpdateProject = async (e) => {
+    e.preventDefault();
+
+    if (!editProjectName.trim()) {
+      setError("Project name is required");
+      return;
+    }
+
+    if (!editingProject) {
+      return;
+    }
+
+    try {
+      setUpdating(true);
+      setError("");
+
+      const data = await updateProject(
+        editingProject._id,
+        {
+          name: editProjectName,
+          description: editDescription,
+        },
+        token
+      );
+
+      // Update project instantly in dashboard
+      setProjects((previousProjects) =>
+        previousProjects.map((project) =>
+          project._id === editingProject._id
+            ? data.project
+            : project
+        )
+      );
+
+      // Close modal
+      setShowEditForm(false);
+      setEditingProject(null);
+      setEditProjectName("");
+      setEditDescription("");
+    } catch (error) {
+      console.error("Failed to update project:", error);
+      setError(error.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   // Delete project
   const handleDeleteProject = async (projectId) => {
     const confirmed = window.confirm(
@@ -107,7 +222,7 @@ function Dashboard() {
 
       await deleteProject(projectId, token);
 
-      // Remove deleted project immediately from dashboard
+      // Remove deleted project immediately
       setProjects((previousProjects) =>
         previousProjects.filter(
           (project) => project._id !== projectId
@@ -136,7 +251,10 @@ function Dashboard() {
             Dashboard
           </button>
 
-          <button className="nav-item">
+          <button
+            className="nav-item"
+            onClick={openCreateProjectForm}
+          >
             <span>▣</span>
             Projects
           </button>
@@ -240,6 +358,45 @@ function Dashboard() {
 
         </section>
 
+        {invitations.length > 0 && (
+          <section className="invitations-section">
+            <div className="section-header">
+              <div>
+                <h2>Project Invitations</h2>
+                <p>Accept an invitation to request entry. The team lead has the final approval.</p>
+              </div>
+              <span className="invitation-count">{invitations.length} pending</span>
+            </div>
+
+            <div className="invitations-list">
+              {invitations.map((invitation) => (
+                <div className="invitation-card" key={invitation.membershipId}>
+                  <div>
+                    <h3>{invitation.projectName}</h3>
+                    <p>Invited by {invitation.owner?.name || invitation.owner?.username || "the team lead"}</p>
+                  </div>
+                  <div className="invitation-actions">
+                    <button
+                      className="accept-invitation-btn"
+                      onClick={() => handleInvitationResponse(invitation, "accept")}
+                      disabled={invitationActionLoading}
+                    >
+                      Accept & Request Entry
+                    </button>
+                    <button
+                      className="decline-invitation-btn"
+                      onClick={() => handleInvitationResponse(invitation, "reject")}
+                      disabled={invitationActionLoading}
+                    >
+                      Decline
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* Projects */}
         <section className="projects-section">
 
@@ -259,10 +416,7 @@ function Dashboard() {
 
             <button
               className="create-project-btn"
-              onClick={() => {
-                setError("");
-                setShowForm(true);
-              }}
+              onClick={openCreateProjectForm}
             >
               + Create Project
             </button>
@@ -307,10 +461,7 @@ function Dashboard() {
 
               <button
                 className="create-project-btn"
-                onClick={() => {
-                  setError("");
-                  setShowForm(true);
-                }}
+                onClick={openCreateProjectForm}
               >
                 + Create Your First Project
               </button>
@@ -327,6 +478,10 @@ function Dashboard() {
                 <div
                   className="project-card"
                   key={project._id}
+                  onClick={() =>
+                    navigate(`/projects/${project._id}`)
+                  }
+                  style={{ cursor: "pointer" }}
                 >
 
                   <div className="project-card-header">
@@ -359,14 +514,29 @@ function Dashboard() {
                       ).toLocaleDateString()}
                     </span>
 
-                    <button
-                      className="delete-project-btn"
-                      onClick={() =>
-                        handleDeleteProject(project._id)
-                      }
-                    >
-                      Delete
-                    </button>
+                    <div className="project-actions">
+
+                      <button
+                        className="edit-project-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(project);
+                        }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="delete-project-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project._id);
+                        }}
+                      >
+                        Delete
+                      </button>
+
+                    </div>
 
                   </div>
 
@@ -475,6 +645,117 @@ function Dashboard() {
                   {creating
                     ? "Creating..."
                     : "Create Project"}
+                </button>
+
+              </div>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {/* Edit Project Modal */}
+      {showEditForm && (
+
+        <div
+          className="modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowEditForm(false);
+              setEditingProject(null);
+            }
+          }}
+        >
+
+          <div className="project-modal">
+
+            <div className="modal-header">
+
+              <div>
+
+                <h2>
+                  Edit Project
+                </h2>
+
+                <p>
+                  Update your project details.
+                </p>
+
+              </div>
+
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setEditingProject(null);
+                }}
+              >
+                ×
+              </button>
+
+            </div>
+
+            <form onSubmit={handleUpdateProject}>
+
+              <div className="form-group">
+
+                <label>
+                  Project Name
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter project name"
+                  value={editProjectName}
+                  onChange={(e) =>
+                    setEditProjectName(e.target.value)
+                  }
+                  required
+                />
+
+              </div>
+
+              <div className="form-group">
+
+                <label>
+                  Description
+                </label>
+
+                <textarea
+                  placeholder="Describe your project"
+                  value={editDescription}
+                  onChange={(e) =>
+                    setEditDescription(e.target.value)
+                  }
+                  rows="4"
+                />
+
+              </div>
+
+              <div className="modal-actions">
+
+                <button
+                  type="button"
+                  className="cancel-btn"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditingProject(null);
+                  }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="create-project-btn"
+                  disabled={updating}
+                >
+                  {updating
+                    ? "Updating..."
+                    : "Update Project"}
                 </button>
 
               </div>

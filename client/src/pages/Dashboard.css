@@ -55,8 +55,8 @@
 
 .nav-item:hover,
 .nav-item.active {
-  background: #1f2937;
-  color: white;
+  background: #fce7f3;
+  color: #9d174d;
 }
 
 .sidebar-bottom {
@@ -209,6 +209,82 @@
 .empty-projects p {
   color: #6b7280;
   margin-bottom: 22px;
+}
+
+.invitations-section {
+  margin-bottom: 24px;
+  padding: 24px 30px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 18px;
+}
+
+.invitation-count {
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #ffedd5;
+  color: #9a3412;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.invitations-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.invitation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+}
+
+.invitation-card h3,
+.invitation-card p {
+  margin: 0;
+}
+
+.invitation-card h3 {
+  color: #111827;
+  font-size: 16px;
+}
+
+.invitation-card p {
+  margin-top: 5px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.invitation-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.accept-invitation-btn,
+.decline-invitation-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 9px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.accept-invitation-btn {
+  background: #16a34a;
+  color: white;
+}
+
+.decline-invitation-btn {
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 @media (max-width: 900px) {
@@ -450,6 +526,28 @@
   color: #b91c1c;
   border-radius: 8px;
 }
+.project-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-project-btn {
+  border: none;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 7px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.edit-project-btn:hover {
+  background: #bbf7d0;
+  color: #166534;
+}
+
 .delete-project-btn {
   border: none;
   background: #fee2e2;

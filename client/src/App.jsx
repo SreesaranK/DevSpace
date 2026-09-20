@@ -1,4 +1,3 @@
-
 import {
   BrowserRouter,
   Routes,
@@ -9,6 +8,7 @@ import {
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
+import ProjectDetails from "./pages/ProjectDetails";
 
 import {
   AuthProvider,
@@ -40,7 +40,9 @@ function AppRoutes() {
 
   return (
     <Routes>
+
       {/* Public routes */}
+
       <Route
         path="/login"
         element={
@@ -59,7 +61,8 @@ function AppRoutes() {
         }
       />
 
-      {/* Protected route */}
+      {/* Dashboard */}
+
       <Route
         path="/dashboard"
         element={
@@ -69,7 +72,19 @@ function AppRoutes() {
         }
       />
 
+      {/* Project Details */}
+
+      <Route
+        path="/projects/:projectId"
+        element={
+          <ProtectedRoute>
+            <ProjectDetails />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Default route */}
+
       <Route
         path="/"
         element={
@@ -85,6 +100,7 @@ function AppRoutes() {
       />
 
       {/* Any unknown route */}
+
       <Route
         path="*"
         element={
@@ -98,6 +114,7 @@ function AppRoutes() {
           />
         }
       />
+
     </Routes>
   );
 }
