@@ -8,6 +8,9 @@ import {
   updateProject,
   getMemberInvitations,
   respondToMemberInvitation,
+  getProjectTasks,
+  updateTask,
+  getProjectActivity,
 } from "../services/api";
 import "./Dashboard.css";
 
@@ -26,6 +29,10 @@ function Dashboard() {
   const [creating, setCreating] = useState(false);
   const [invitations, setInvitations] = useState([]);
   const [invitationActionLoading, setInvitationActionLoading] = useState(false);
+  const [activeView, setActiveView] = useState("dashboard");
+  const [allTasks, setAllTasks] = useState([]);
+  const [allActivity, setAllActivity] = useState([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
 
   // Edit project states
   const [showEditForm, setShowEditForm] = useState(false);
@@ -70,6 +77,87 @@ function Dashboard() {
       fetchProjects();
     }
   }, [token]);
+
+  useEffect(() => {
+    const fetchWorkspaceData = async () => {
+      if (!token || projects.length === 0) {
+        setAllTasks([]);
+        setAllActivity([]);
+        return;
+      }
+
+      try {
+        setWorkspaceLoading(true);
+        const results = await Promise.all(
+          projects.map(async (project) => {
+            const [taskData, activityData] = await Promise.all([
+              getProjectTasks(project._id, token),
+              getProjectActivity(project._id, token),
+            ]);
+
+            return {
+              tasks: (taskData.tasks || []).map((task) => ({
+                ...task,
+                projectName: project.name,
+                projectId: project._id,
+              })),
+              activities: (activityData.activities || []).map((activity) => ({
+                ...activity,
+                projectName: project.name,
+              })),
+            };
+          })
+        );
+
+        setAllTasks(results.flatMap((result) => result.tasks));
+        setAllActivity(
+          results
+            .flatMap((result) => result.activities)
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        );
+      } catch (error) {
+        console.error("Failed to fetch workspace data:", error);
+      } finally {
+        setWorkspaceLoading(false);
+      }
+    };
+
+    fetchWorkspaceData();
+  }, [projects, token]);
+
+  const handleTaskStatusChange = async (task, status) => {
+    try {
+      await updateTask(task._id, { status }, token);
+      setAllTasks((currentTasks) =>
+        currentTasks.map((currentTask) =>
+          currentTask._id === task._id ? { ...currentTask, status } : currentTask
+        )
+      );
+    } catch (error) {
+      setError(error.message);
+    }
+  };
+
+  const formatActivityTime = (date) => {
+    return new Date(date).toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatActivityAction = (activity) => {
+    const target = activity.target ? ` “${activity.target}”` : "";
+    const actions = {
+      task_created: `created task${target}`,
+      task_updated: `updated task${target}`,
+      task_completed: `completed task${target}`,
+      task_reopened: `reopened task${target}`,
+      task_deleted: `deleted task${target}`,
+      member_invited: `invited ${activity.target || "a member"}`,
+      member_joined: "joined the project",
+    };
+    return actions[activity.action] || "updated the project";
+  };
 
   useEffect(() => {
     const fetchInvitations = async () => {
@@ -246,25 +334,34 @@ function Dashboard() {
 
         <nav className="nav-menu">
 
-          <button className="nav-item active">
+          <button
+            className={`nav-item ${activeView === "dashboard" ? "active" : ""}`}
+            onClick={() => setActiveView("dashboard")}
+          >
             <span>⌂</span>
             Dashboard
           </button>
 
           <button
-            className="nav-item"
-            onClick={openCreateProjectForm}
+            className={`nav-item ${activeView === "projects" ? "active" : ""}`}
+            onClick={() => setActiveView("projects")}
           >
             <span>▣</span>
             Projects
           </button>
 
-          <button className="nav-item">
+          <button
+            className={`nav-item ${activeView === "tasks" ? "active" : ""}`}
+            onClick={() => setActiveView("tasks")}
+          >
             <span>✓</span>
             Tasks
           </button>
 
-          <button className="nav-item">
+          <button
+            className={`nav-item ${activeView === "activity" ? "active" : ""}`}
+            onClick={() => setActiveView("activity")}
+          >
             <span>◉</span>
             Activity
           </button>
@@ -314,8 +411,10 @@ function Dashboard() {
 
         </header>
 
-        {/* Stats */}
-        <section className="stats-grid">
+        {activeView === "dashboard" && (
+          <>
+            {/* Stats */}
+            <section className="stats-grid">
 
           <div className="stat-card">
 
@@ -356,10 +455,10 @@ function Dashboard() {
 
           </div>
 
-        </section>
+            </section>
 
-        {invitations.length > 0 && (
-          <section className="invitations-section">
+            {invitations.length > 0 && (
+              <section className="invitations-section">
             <div className="section-header">
               <div>
                 <h2>Project Invitations</h2>
@@ -394,11 +493,14 @@ function Dashboard() {
                 </div>
               ))}
             </div>
-          </section>
+              </section>
+            )}
+          </>
         )}
 
         {/* Projects */}
-        <section className="projects-section">
+        {activeView === "dashboard" && (
+          <section className="projects-section">
 
           <div className="section-header">
 
@@ -548,7 +650,121 @@ function Dashboard() {
 
           )}
 
-        </section>
+          </section>
+        )}
+
+        {activeView === "projects" && (
+          <section className="workspace-section projects-view">
+            <div className="workspace-heading">
+              <div>
+                <span className="eyebrow">Portfolio view</span>
+                <h2>Projects at a glance</h2>
+                <p>Jump into a workspace or shape the next idea in your pipeline.</p>
+              </div>
+              <button className="create-project-btn" onClick={openCreateProjectForm}>
+                + New project
+              </button>
+            </div>
+
+            {projects.length === 0 ? (
+              <div className="workspace-empty">
+                <span className="empty-icon">▣</span>
+                <h3>Your portfolio is waiting</h3>
+                <p>Create a project to give your next build a home.</p>
+              </div>
+            ) : (
+              <div className="portfolio-list">
+                {projects.map((project) => (
+                  <button
+                    className="portfolio-row"
+                    key={project._id}
+                    onClick={() => navigate(`/projects/${project._id}`)}
+                  >
+                    <span className="portfolio-mark">{project.name.charAt(0).toUpperCase()}</span>
+                    <span className="portfolio-copy">
+                      <strong>{project.name}</strong>
+                      <small>{project.description || "No description yet"}</small>
+                    </span>
+                    <span className="portfolio-status">{project.status}</span>
+                    <span className="portfolio-arrow">→</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeView === "tasks" && (
+          <section className="workspace-section tasks-view">
+            <div className="workspace-heading">
+              <div>
+                <span className="eyebrow">Focus queue</span>
+                <h2>Everything that needs your attention</h2>
+                <p>Move work forward across every project from one calm list.</p>
+              </div>
+              <span className="view-count">{allTasks.length} tasks</span>
+            </div>
+
+            {workspaceLoading ? (
+              <div className="workspace-empty"><h3>Gathering your work...</h3></div>
+            ) : allTasks.length === 0 ? (
+              <div className="workspace-empty"><span className="empty-icon">✓</span><h3>Your queue is clear</h3><p>Tasks created inside your project workspaces will appear here.</p></div>
+            ) : (
+              <div className="task-queue">
+                {allTasks.map((task) => (
+                  <article className="task-row" key={task._id}>
+                    <button
+                      className={`task-check ${task.status === "completed" ? "done" : ""}`}
+                      aria-label={`Mark ${task.title} ${task.status === "completed" ? "incomplete" : "complete"}`}
+                      onClick={() => handleTaskStatusChange(task, task.status === "completed" ? "todo" : "completed")}
+                    >
+                      {task.status === "completed" ? "✓" : ""}
+                    </button>
+                    <div className="task-copy">
+                      <strong className={task.status === "completed" ? "completed-task" : ""}>{task.title}</strong>
+                      <span>{task.projectName}</span>
+                    </div>
+                    <span className={`task-priority ${task.priority || "medium"}`}>{task.priority || "medium"}</span>
+                    <span className="task-status">{task.status}</span>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {activeView === "activity" && (
+          <section className="workspace-section activity-view">
+            <div className="workspace-heading">
+              <div>
+                <span className="eyebrow">Signal feed</span>
+                <h2>What changed across your space</h2>
+                <p>A living record of progress, decisions, and team movement.</p>
+              </div>
+              <span className="view-count">{allActivity.length} updates</span>
+            </div>
+
+            {workspaceLoading ? (
+              <div className="workspace-empty"><h3>Reading the latest updates...</h3></div>
+            ) : allActivity.length === 0 ? (
+              <div className="workspace-empty"><span className="empty-icon">◉</span><h3>No activity yet</h3><p>Your project updates will collect here as work begins.</p></div>
+            ) : (
+              <div className="activity-feed">
+                {allActivity.map((activity) => (
+                  <article className="activity-row" key={activity._id}>
+                    <span className="activity-dot" />
+                    <div className="activity-copy">
+                      <strong>{activity.actor?.name || activity.actor?.username || "Someone"}</strong>
+                      <span>{formatActivityAction(activity)}</span>
+                      <small>{activity.projectName}</small>
+                    </div>
+                    <time>{formatActivityTime(activity.createdAt)}</time>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
       </main>
 
