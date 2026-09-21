@@ -324,17 +324,148 @@
 
 @media (max-width: 600px) {
   .sidebar {
+    width: 100%;
+    min-height: auto;
+    padding: 10px 8px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .logo {
     display: none;
   }
 
+  .nav-menu {
+    flex: 1;
+    flex-direction: row;
+    gap: 3px;
+  }
+
+  .sidebar-bottom {
+    display: flex;
+    gap: 3px;
+    margin-top: 0;
+  }
+
+  .nav-item {
+    min-width: 0;
+    padding: 7px 4px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-size: 10px;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .nav-item span {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1;
+  }
+
   .main-content {
-    padding: 20px;
+    min-width: 0;
+    padding: 18px 12px 28px;
   }
 
   .section-header {
     align-items: flex-start;
     flex-direction: column;
     gap: 20px;
+  }
+
+  .topbar {
+    margin-bottom: 24px;
+  }
+
+  .topbar h1 {
+    font-size: 24px;
+  }
+
+  .welcome-text {
+    font-size: 13px;
+  }
+
+  .avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 15px;
+  }
+
+  .stats-grid {
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .stat-icon {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+  }
+
+  .projects-section,
+  .invitations-section {
+    padding: 20px 16px;
+    border-radius: 14px;
+  }
+
+  .section-header h2 {
+    font-size: 21px;
+  }
+
+  .create-project-btn {
+    width: 100%;
+  }
+
+  .invitation-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .invitation-actions {
+    flex-wrap: wrap;
+  }
+
+  .accept-invitation-btn,
+  .decline-invitation-btn {
+    flex: 1;
+  }
+
+  .projects-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 22px;
+  }
+
+  .project-card {
+    padding: 18px;
+  }
+
+  .project-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .project-actions {
+    width: 100%;
+  }
+
+  .edit-project-btn,
+  .delete-project-btn {
+    flex: 1;
   }
 }
 /* Project Cards */
